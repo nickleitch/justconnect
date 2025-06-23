@@ -1,5 +1,5 @@
 import React from "react";
-import { BarChart3, TrendingUp } from "lucide-react";
+import { TrendingUp } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import {
   Sidebar,
@@ -20,15 +20,10 @@ interface AppLayoutProps {
 
 export function AppLayout({ children, currentPage }: AppLayoutProps) {
   const location = useLocation();
-  const actualCurrentPage = currentPage || (location.pathname === "/v2" ? "v2" : "sales-reports");
+  const actualCurrentPage = currentPage || "v2";
   
   const getPageTitle = () => {
-    switch (actualCurrentPage) {
-      case "v2":
-        return "Sales Intelligence Dashboard";
-      default:
-        return "Sales Reports";
-    }
+    return "Sales Intelligence Dashboard";
   };
 
   return (
@@ -46,15 +41,7 @@ export function AppLayout({ children, currentPage }: AppLayoutProps) {
         <SidebarContent>
           <SidebarMenu>
             <SidebarMenuItem>
-              <SidebarMenuButton asChild isActive={actualCurrentPage === "sales-reports"}>
-                <Link to="/">
-                  <BarChart3 className="h-4 w-4" />
-                  <span>Sales Reports</span>
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-            <SidebarMenuItem>
-              <SidebarMenuButton asChild isActive={actualCurrentPage === "v2"}>
+              <SidebarMenuButton asChild isActive={true}>
                 <Link to="/v2">
                   <TrendingUp className="h-4 w-4" />
                   <span>V2</span>
