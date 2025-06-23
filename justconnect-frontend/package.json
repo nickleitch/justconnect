@@ -2,6 +2,9 @@
   "name": "justconnect-frontend",
   "private": true,
   "type": "module",
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "description": "Justconnect Sales Report Generator with Comparison Analytics and Public Sharing",
   "scripts": {
     "dev": "vite",
