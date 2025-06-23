@@ -123,8 +123,7 @@ export function JustconnectReportGenerator() {
   const isFormValid = uploadedFile && reportMode && 
     (reportMode !== "compare" || comparisonPeriod);
 
-  return (
- devin/1750711583-simplify-webapp-architecture
+return (
     <div className="max-w-6xl mx-auto space-y-8">
       {/* Header */}
       <div className="text-center space-y-4">
@@ -138,10 +137,6 @@ export function JustconnectReportGenerator() {
           Upload your daily Excel sales data and generate comprehensive reports with comparison analytics
         </p>
       </div>
-
-=======
-    <div className="max-w-5xl mx-auto space-y-6">
- main
       {/* Main Form */}
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Left Column - Configuration */}
