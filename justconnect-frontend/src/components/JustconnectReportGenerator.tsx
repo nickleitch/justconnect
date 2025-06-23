@@ -187,22 +187,9 @@ export function JustconnectReportGenerator() {
     (reportMode !== "compare" || comparisonPeriod);
 
   return (
-    <div className="max-w-6xl mx-auto space-y-8">
-      {/* Header */}
-      <div className="text-center space-y-4">
-        <div className="inline-flex items-center justify-center w-16 h-16 bg-primary/10 rounded-2xl mb-4">
-          <FileSpreadsheet className="w-8 h-8 text-primary" />
-        </div>
-        <h1 className="text-4xl font-bold tracking-tight">
-          Justconnect Sales Reports
-        </h1>
-        <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-          Upload your daily Excel sales data and generate comprehensive reports with comparison analytics and SMS notifications
-        </p>
-      </div>
-
+    <div className="max-w-5xl mx-auto space-y-6">
       {/* Main Form */}
-      <div className="grid gap-8 lg:grid-cols-2">
+      <div className="grid gap-6 lg:grid-cols-2">
         {/* Left Column - Configuration */}
         <div className="space-y-6">
           {/* File Upload */}
