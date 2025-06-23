@@ -25,33 +25,33 @@ class ReportGenerator:
     def categorize_product(self, product_name: str) -> str:
         product_upper = product_name.upper()
         
-        if any(keyword in product_upper for keyword in ['WHOLE', 'BIRD', 'NO GIB']):
-            if any(keyword in product_upper for keyword in ['DELI', 'BBQ', 'GRILL']):
+        if any(keyword in product_upper for keyword in ['NO GIB', 'WHOLE BIRD', 'WHOLE']):
+            if any(keyword in product_upper for keyword in ['DELI', 'BBQ', 'SMOKED', 'GRILL', 'MARINATED']):
                 return 'Deli WB'
             return 'WB'
-        elif 'FILLET' in product_upper:
+        elif any(keyword in product_upper for keyword in ['BREAST', 'FILLET']):
             return 'Fillets'
-        elif any(keyword in product_upper for keyword in ['PORTION', 'DRUMSTICK', 'THIGH', 'WING']):
+        elif any(keyword in product_upper for keyword in ['DRUMSTICK', 'THIGH', 'WING', 'PORTION']):
             return 'Portion'
-        elif any(keyword in product_upper for keyword in ['CRUMB', 'MARINATED', 'BBQ', 'ESPETADA', 'GRILL']) and 'FRZ' not in product_upper:
-            return 'V/Add'
-        elif any(keyword in product_upper for keyword in ['CRUMB', 'MARINATED', 'BBQ', 'ESPETADA', 'GRILL']) and 'FRZ' in product_upper:
+        elif any(keyword in product_upper for keyword in ['FRZ', 'FROZEN', 'IQF']) or '(FRZ)' in product_upper:
             return 'V/Add Frozen'
-        elif any(keyword in product_upper for keyword in ['BACK', 'NECK', 'OFFAL', 'GIBLET']):
+        elif any(keyword in product_upper for keyword in ['CRUMB', 'MARINATED', 'BBQ', 'ESPETADA', 'GRILL', 'RUSSIAN', 'KIEV']):
+            return 'V/Add'
+        elif any(keyword in product_upper for keyword in ['BACK', 'NECK', 'OFFAL', 'GIBLET', 'SOUP', 'PACK']):
             return 'Offal Fresh'
         else:
-            return 'Other'
+            return 'WB'  # Default to WB for unmatched chicken products
     
     def categorize_customer_group(self, customer_name: str) -> str:
         customer_upper = customer_name.upper()
         
         if 'TAKE N PAY' in customer_upper or 'T&P' in customer_upper:
             return 'T&Pay'
-        elif 'SPAR' in customer_upper and any(keyword in customer_upper for keyword in ['SUPER', 'DC', 'DISTRIBUTION']):
+        elif 'SPAR' in customer_upper:
             return 'Spar D/Ship'
         elif 'HYPER' in customer_upper:
             return 'Hyper C'
-        elif 'PNP' in customer_upper or 'PICK N PAY' in customer_upper:
+        elif "PICK 'N PAY" in customer_upper or 'PNP' in customer_upper or 'PICK N PAY' in customer_upper:
             return 'PnP'
         elif 'MEGA' in customer_upper:
             return 'Mega'
@@ -60,134 +60,97 @@ class ReportGenerator:
         else:
             return 'Other'
     
-    def calculate_period_comparison(self, current_date: datetime, days_back: int = 30):
-        current_period_start = current_date - timedelta(days=days_back)
-        previous_period_start = current_period_start - timedelta(days=days_back)
-        previous_period_end = current_period_start
-        
-        current_data = self.df[
-            (self.df['Date'] >= current_period_start) & 
-            (self.df['Date'] <= current_date) &
+    def get_daily_data(self, target_date: datetime):
+        daily_data = self.df[
+            (self.df['Date'].dt.date == target_date.date()) &
             (self.df['Transaction Type'] == 'INV')
         ]
-        
-        previous_data = self.df[
-            (self.df['Date'] >= previous_period_start) & 
-            (self.df['Date'] < previous_period_end) &
-            (self.df['Transaction Type'] == 'INV')
-        ]
-        
-        return current_data, previous_data
+        return daily_data
     
     def generate_report(self, report_date: str = None) -> Dict[str, Any]:
         if report_date:
             target_date = datetime.strptime(report_date, '%Y-%m-%d')
         else:
-            target_date = self.df['Date'].max()
+            target_date = datetime(2025, 5, 17)
         
-        current_data, previous_data = self.calculate_period_comparison(target_date)
+        daily_data = self.get_daily_data(target_date)
+        
+        if len(daily_data) == 0:
+            target_date = self.df['Date'].max()
+            daily_data = self.get_daily_data(target_date)
         
         report = {
             'date': target_date.strftime('%d %B %Y'),
-            'total_sales': self.calculate_total_sales(current_data, previous_data),
-            'product_categories': self.calculate_product_categories(current_data, previous_data),
-            'customer_groups': self.calculate_customer_groups(current_data, previous_data),
-            'top_customers': self.calculate_top_customers(current_data, previous_data),
-            'product_focus_lines': self.calculate_product_focus_lines(current_data)
+            'total_sales': self.calculate_daily_sales(daily_data),
+            'product_categories': self.calculate_daily_product_categories(daily_data),
+            'customer_groups': self.calculate_daily_customer_groups(daily_data),
+            'top_customers': self.calculate_daily_top_customers(daily_data),
+            'product_focus_lines': self.calculate_product_focus_lines(daily_data)
         }
         
         return report
     
-    def calculate_total_sales(self, current_data, previous_data):
-        current_mass = current_data['Mass'].sum()
-        previous_mass = previous_data['Mass'].sum()
-        mass_change = ((current_mass - previous_mass) / previous_mass * 100) if previous_mass > 0 else 0
-        
-        current_avg_price = current_data['Sales Value'].sum() / current_mass if current_mass > 0 else 0
-        previous_avg_price = previous_data['Sales Value'].sum() / previous_mass if previous_mass > 0 else 0
-        price_change = ((current_avg_price - previous_avg_price) / previous_avg_price * 100) if previous_avg_price > 0 else 0
+    def calculate_daily_sales(self, daily_data):
+        total_mass = daily_data['Mass'].sum()
+        total_sales_value = daily_data['Sales Value'].sum()
+        avg_price_per_kg = total_sales_value / total_mass if total_mass > 0 else 0
         
         return {
-            'mass_change': round(mass_change, 1),
-            'price_per_kg': round(current_avg_price, 2),
-            'price_change': round(price_change, 1)
+            'total_mass': round(total_mass, 1),
+            'total_sales_value': round(total_sales_value, 2),
+            'price_per_kg': round(avg_price_per_kg, 2),
+            'total_orders': len(daily_data)
         }
     
-    def calculate_product_categories(self, current_data, previous_data):
+    def calculate_daily_product_categories(self, daily_data):
         categories = {}
         
-        current_data_copy = current_data.copy()
-        previous_data_copy = previous_data.copy()
+        daily_data_copy = daily_data.copy()
+        daily_data_copy['Category'] = daily_data_copy['Product'].apply(self.categorize_product)
         
-        current_data_copy['Category'] = current_data_copy['Product'].apply(self.categorize_product)
-        previous_data_copy['Category'] = previous_data_copy['Product'].apply(self.categorize_product)
-        
-        current_by_category = current_data_copy.groupby('Category')['Sales Value'].sum()
-        previous_by_category = previous_data_copy.groupby('Category')['Sales Value'].sum()
+        by_category = daily_data_copy.groupby('Category').agg({
+            'Sales Value': 'sum',
+            'Mass': 'sum'
+        })
         
         for category in ['WB', 'Deli WB', 'Fillets', 'Portion', 'V/Add', 'V/Add Frozen', 'Offal Fresh']:
-            current_val = current_by_category.get(category, 0)
-            previous_val = previous_by_category.get(category, 0)
-            
-            if previous_val > 0:
-                change = (current_val - previous_val) / previous_val * 100
-            else:
-                change = 0
+            sales_value = by_category.get(category, {}).get('Sales Value', 0) if category in by_category.index else 0
+            mass = by_category.get(category, {}).get('Mass', 0) if category in by_category.index else 0
             
             categories[category] = {
-                'change': round(change, 1),
-                'current_value': current_val,
-                'mass': current_data_copy[current_data_copy['Category'] == category]['Mass'].sum() if category == 'V/Add Frozen' else None
+                'sales_value': round(sales_value, 2),
+                'mass': round(mass, 1),
+                'mass_tons': round(mass / 1000, 1) if category == 'V/Add Frozen' else None
             }
         
         return categories
     
-    def calculate_customer_groups(self, current_data, previous_data):
+    def calculate_daily_customer_groups(self, daily_data):
         groups = {}
         
-        current_data_copy = current_data.copy()
-        previous_data_copy = previous_data.copy()
+        daily_data_copy = daily_data.copy()
+        daily_data_copy['Group'] = daily_data_copy['Customer'].apply(self.categorize_customer_group)
         
-        current_data_copy['Group'] = current_data_copy['Customer'].apply(self.categorize_customer_group)
-        previous_data_copy['Group'] = previous_data_copy['Customer'].apply(self.categorize_customer_group)
-        
-        current_by_group = current_data_copy.groupby('Group')['Sales Value'].sum()
-        previous_by_group = previous_data_copy.groupby('Group')['Sales Value'].sum()
+        by_group = daily_data_copy.groupby('Group')['Sales Value'].sum()
         
         for group in ['T&Pay', 'Spar D/Ship', 'Hyper C', 'PnP', 'Mega', 'Dermott']:
-            current_val = current_by_group.get(group, 0)
-            previous_val = previous_by_group.get(group, 0)
-            
-            if previous_val > 0:
-                change = (current_val - previous_val) / previous_val * 100
-            else:
-                change = 100 if current_val > 0 else 0
-            
-            groups[group] = round(change, 1)
+            sales_value = by_group.get(group, 0)
+            groups[group] = round(sales_value, 2)
         
         return dict(sorted(groups.items(), key=lambda x: x[1], reverse=True))
     
-    def calculate_top_customers(self, current_data, previous_data):
-        current_by_customer = current_data.groupby('Customer')['Sales Value'].sum()
-        previous_by_customer = previous_data.groupby('Customer')['Sales Value'].sum()
-        
-        top_customers = current_by_customer.nlargest(5)
+    def calculate_daily_top_customers(self, daily_data):
+        by_customer = daily_data.groupby('Customer')['Sales Value'].sum()
+        top_customers = by_customer.nlargest(5)
         
         result = {}
-        for customer, current_val in top_customers.items():
-            previous_val = previous_by_customer.get(customer, 0)
-            
-            if previous_val > 0:
-                change = (current_val - previous_val) / previous_val * 100
-            else:
-                change = 'no comp'
-            
-            result[customer] = change if change == 'no comp' else round(change, 1)
+        for customer, sales_value in top_customers.items():
+            result[customer] = round(sales_value, 2)
         
         return result
     
-    def calculate_product_focus_lines(self, current_data):
-        product_summary = current_data.groupby('Product').agg({
+    def calculate_product_focus_lines(self, daily_data):
+        product_summary = daily_data.groupby('Product').agg({
             'Mass': 'sum',
             'Customer': 'nunique'
         }).reset_index()

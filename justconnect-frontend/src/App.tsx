@@ -7,22 +7,23 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 interface ReportData {
   date: string
   total_sales: {
-    mass_change: number
+    total_mass: number
+    total_sales_value: number
     price_per_kg: number
-    price_change: number
+    total_orders: number
   }
   product_categories: {
     [key: string]: {
-      change: number
-      current_value: number
-      mass?: number
+      sales_value: number
+      mass: number
+      mass_tons?: number
     }
   }
   customer_groups: {
     [key: string]: number
   }
   top_customers: {
-    [key: string]: number | string
+    [key: string]: number
   }
   product_focus_lines: {
     [key: string]: {
@@ -74,11 +75,7 @@ function App() {
     }
   }
 
-  const formatPercentage = (value: number | string) => {
-    if (value === 'no comp') return 'no comp'
-    const numValue = typeof value === 'number' ? value : parseFloat(value.toString())
-    return `${numValue > 0 ? '+' : ''}${numValue}%`
-  }
+
 
   return (
     <div className="min-h-screen bg-gray-50 p-4">
@@ -161,14 +158,26 @@ function App() {
                   <div className="space-y-2">
                     <div className="flex justify-between">
                       <span>Mass:</span>
-                      <span className={report.total_sales.mass_change >= 0 ? 'text-green-600' : 'text-red-600'}>
-                        {formatPercentage(report.total_sales.mass_change)}
+                      <span className="text-blue-600 font-medium">
+                        {report.total_sales.total_mass}kg
                       </span>
                     </div>
                     <div className="flex justify-between">
                       <span>P/Kg:</span>
-                      <span className={report.total_sales.price_change >= 0 ? 'text-green-600' : 'text-red-600'}>
-                        {formatPercentage(report.total_sales.price_change)} (R{report.total_sales.price_per_kg})
+                      <span className="text-blue-600 font-medium">
+                        R{report.total_sales.price_per_kg}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Total Sales:</span>
+                      <span className="text-green-600 font-medium">
+                        R{report.total_sales.total_sales_value}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Orders:</span>
+                      <span className="text-gray-600 font-medium">
+                        {report.total_sales.total_orders}
                       </span>
                     </div>
                   </div>
@@ -187,9 +196,9 @@ function App() {
                     {Object.entries(report.product_categories).map(([category, data]) => (
                       <div key={category} className="flex justify-between">
                         <span>{category}:</span>
-                        <span className={data.change >= 0 ? 'text-green-600' : 'text-red-600'}>
-                          {formatPercentage(data.change)}
-                          {data.mass && ` (${(data.mass / 1000).toFixed(1)}T)`}
+                        <span className="text-blue-600 font-medium">
+                          R{data.sales_value} ({data.mass}kg)
+                          {data.mass_tons && ` (${data.mass_tons}T)`}
                         </span>
                       </div>
                     ))}
@@ -201,16 +210,16 @@ function App() {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <Users className="h-5 w-5" />
-                    Customer Grp Growth MTD
+                    Customer Group Sales
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-2 text-sm">
-                    {Object.entries(report.customer_groups).slice(0, 6).map(([group, change], index) => (
+                    {Object.entries(report.customer_groups).slice(0, 6).map(([group, sales], index) => (
                       <div key={group} className="flex justify-between">
                         <span>{index + 1}. {group}:</span>
-                        <span className={change >= 0 ? 'text-green-600' : 'text-red-600'}>
-                          {formatPercentage(change)}
+                        <span className="text-green-600 font-medium">
+                          R{sales}
                         </span>
                       </div>
                     ))}
@@ -226,11 +235,11 @@ function App() {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-2 text-sm">
-                    {Object.entries(report.top_customers).map(([customer, change], index) => (
+                    {Object.entries(report.top_customers).map(([customer, sales], index) => (
                       <div key={customer} className="flex justify-between">
                         <span className="truncate mr-2">{index + 1}. {customer}:</span>
-                        <span className={typeof change === 'number' && change >= 0 ? 'text-green-600' : 'text-red-600'}>
-                          {typeof change === 'number' ? formatPercentage(change) : change}
+                        <span className="text-green-600 font-medium">
+                          R{sales}
                         </span>
                       </div>
                     ))}
