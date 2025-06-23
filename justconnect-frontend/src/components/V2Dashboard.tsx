@@ -52,7 +52,7 @@ export function V2Dashboard() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                ${stats.potentialRevenue.toLocaleString()}
+                R{stats.potentialRevenue.toLocaleString()}
               </div>
               <p className="text-xs text-muted-foreground">
                 From missed orders

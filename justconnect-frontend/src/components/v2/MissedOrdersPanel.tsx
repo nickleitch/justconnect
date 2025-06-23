@@ -86,7 +86,7 @@ export function MissedOrdersPanel() {
                   </span>
                 </TableCell>
                 <TableCell>
-                  ${order.expected_order_value.toLocaleString()}
+                  R{order.expected_order_value.toLocaleString()}
                 </TableCell>
                 <TableCell>
                   <Badge variant={getRiskBadgeVariant(order.risk_level) as any}>
