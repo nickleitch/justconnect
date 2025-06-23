@@ -26,18 +26,20 @@ class ReportGenerator:
         product_upper = product_name.upper()
         
         if any(keyword in product_upper for keyword in ['NO GIB', 'WHOLE BIRD', 'WHOLE']):
-            if any(keyword in product_upper for keyword in ['DELI', 'BBQ', 'SMOKED', 'GRILL', 'MARINATED']):
+            if any(keyword in product_upper for keyword in ['SMOKED', 'BBQ', 'DELI', 'GRILL']):
                 return 'Deli WB'
             return 'WB'
+        elif 'BREAST' in product_upper and any(keyword in product_upper for keyword in ['SMOKED', 'BBQ', 'DELI']):
+            return 'Deli WB'
         elif any(keyword in product_upper for keyword in ['BREAST', 'FILLET']):
             return 'Fillets'
-        elif any(keyword in product_upper for keyword in ['DRUMSTICK', 'THIGH', 'WING', 'PORTION']):
+        elif any(keyword in product_upper for keyword in ['DRUMSTICK', 'THIGH', 'WING', 'STAR PACK']):
             return 'Portion'
-        elif any(keyword in product_upper for keyword in ['FRZ', 'FROZEN', 'IQF']) or '(FRZ)' in product_upper:
+        elif any(keyword in product_upper for keyword in ['FROZEN', 'IQF']) or '(FRZ)' in product_upper or 'FRZ' in product_upper:
             return 'V/Add Frozen'
-        elif any(keyword in product_upper for keyword in ['CRUMB', 'MARINATED', 'BBQ', 'ESPETADA', 'GRILL', 'RUSSIAN', 'KIEV']):
+        elif any(keyword in product_upper for keyword in ['SCHNITZEL', 'CRUMB', 'MARINATED', 'ESPETADA', 'GRILL', 'RUSSIAN', 'KIEV']):
             return 'V/Add'
-        elif any(keyword in product_upper for keyword in ['BACK', 'NECK', 'OFFAL', 'GIBLET', 'SOUP', 'PACK']):
+        elif any(keyword in product_upper for keyword in ['GIZZARD', 'HEART', 'LIVER', 'NECK', 'SOUP PACK', 'OFFAL', 'GIBLET']):
             return 'Offal Fresh'
         else:
             return 'WB'  # Default to WB for unmatched chicken products
@@ -71,13 +73,12 @@ class ReportGenerator:
         if report_date:
             target_date = datetime.strptime(report_date, '%Y-%m-%d')
         else:
-            target_date = datetime(2025, 5, 17)
+            target_date = self.df['Date'].max()
         
         daily_data = self.get_daily_data(target_date)
         
         if len(daily_data) == 0:
-            target_date = self.df['Date'].max()
-            daily_data = self.get_daily_data(target_date)
+            raise ValueError(f"No invoice data found for date {target_date.date()}")
         
         report = {
             'date': target_date.strftime('%d %B %Y'),
@@ -114,8 +115,12 @@ class ReportGenerator:
         })
         
         for category in ['WB', 'Deli WB', 'Fillets', 'Portion', 'V/Add', 'V/Add Frozen', 'Offal Fresh']:
-            sales_value = by_category.get(category, {}).get('Sales Value', 0) if category in by_category.index else 0
-            mass = by_category.get(category, {}).get('Mass', 0) if category in by_category.index else 0
+            if category in by_category.index:
+                sales_value = by_category.loc[category, 'Sales Value']
+                mass = by_category.loc[category, 'Mass']
+            else:
+                sales_value = 0
+                mass = 0
             
             categories[category] = {
                 'sales_value': round(sales_value, 2),
