@@ -27,6 +27,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Progress } from "@/components/ui/progress";
 import { FileUpload } from "./FileUpload";
 import { ReportDisplay } from "./ReportDisplay";
 import { SMSConfig } from "./SMSConfig";
@@ -86,6 +87,7 @@ export function JustconnectReportGenerator() {
   });
   const [sendSMS, setSendSMS] = useState(false);
   const [isSendingSMS, setIsSendingSMS] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
 
   const handleGenerateReport = async () => {
     if (!uploadedFile || !reportMode) {
@@ -97,6 +99,7 @@ export function JustconnectReportGenerator() {
     }
 
     setIsGenerating(true);
+    setUploadProgress(0);
     
     try {
       const formData = new FormData();
@@ -105,26 +108,51 @@ export function JustconnectReportGenerator() {
       const endpoint = reportMode === "compare" 
         ? `/upload-excel?comparison_mode=true&period=${comparisonPeriod}`
         : '/upload-excel';
+
+      await new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
         
-      const response = await fetch(`http://localhost:8000${endpoint}`, {
-        method: 'POST',
-        body: formData,
+        xhr.upload.addEventListener('progress', (event) => {
+          if (event.lengthComputable) {
+            const percentComplete = Math.round((event.loaded / event.total) * 100);
+            setUploadProgress(percentComplete);
+          }
+        });
+        
+        xhr.addEventListener('load', async () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            try {
+              const result = JSON.parse(xhr.responseText);
+              setReportData(result.report);
+              
+              if (sendSMS && smsSettings.apiKey && smsSettings.recipients.length > 0) {
+                await handleSendSMS(result.report);
+              }
+              resolve(result);
+            } catch (parseError) {
+              reject(new Error('Failed to parse response'));
+            }
+          } else {
+            reject(new Error('Failed to generate report'));
+          }
+        });
+        
+        xhr.addEventListener('error', () => {
+          reject(new Error('Failed to generate report'));
+        });
+        
+        xhr.addEventListener('abort', () => {
+          reject(new Error('Upload was aborted'));
+        });
+        
+        xhr.open('POST', `http://localhost:8000${endpoint}`);
+        xhr.send(formData);
       });
-
-      if (!response.ok) {
-        throw new Error('Failed to generate report');
-      }
-
-      const result = await response.json();
-      setReportData(result.report);
-
-      if (sendSMS && smsSettings.apiKey && smsSettings.recipients.length > 0) {
-        await handleSendSMS(result.report);
-      }
     } catch (error) {
       console.error('Error generating report:', error);
     } finally {
       setIsGenerating(false);
+      setUploadProgress(0);
     }
   };
 
@@ -260,7 +288,7 @@ export function JustconnectReportGenerator() {
                 <Checkbox
                   id="enable-sms"
                   checked={sendSMS}
-                  onCheckedChange={setSendSMS}
+                  onCheckedChange={(checked) => setSendSMS(checked as boolean)}
                 />
                 <Label htmlFor="enable-sms">Enable SMS notifications</Label>
               </div>
@@ -306,10 +334,13 @@ export function JustconnectReportGenerator() {
                 size="lg"
               >
                 {isGenerating ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
-                    Generating Report...
-                  </>
+                  <div className="space-y-2 w-full">
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      <span>Uploading... {uploadProgress}%</span>
+                    </div>
+                    <Progress value={uploadProgress} className="w-full h-2" />
+                  </div>
                 ) : isSendingSMS ? (
                   <>
                     <MessageSquare className="w-4 h-4 mr-2" />
