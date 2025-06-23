@@ -1,7 +1,9 @@
-import React from "react";
+import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { TrendingUp, TrendingDown, Minus } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { TrendingUp, TrendingDown, Minus, Share2, Copy, Check } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 interface ReportDisplayProps {
   data: any;
@@ -9,20 +11,121 @@ interface ReportDisplayProps {
 }
 
 export function ReportDisplay({ data, mode }: ReportDisplayProps) {
+  const [isSharing, setIsSharing] = useState(false);
+  const [shareUrl, setShareUrl] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+  const { toast } = useToast();
+
+  const handleShareReport = async () => {
+    setIsSharing(true);
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/share-report`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ report: data, mode }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to create shareable link');
+      }
+
+      const result = await response.json();
+      setShareUrl(result.share_url);
+      
+      toast({
+        title: "Shareable link created!",
+        description: "You can now copy and share this report.",
+      });
+    } catch (error) {
+      console.error('Error creating shareable link:', error);
+      toast({
+        title: "Error",
+        description: "Failed to create shareable link. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSharing(false);
+    }
+  };
+
+  const handleCopyUrl = async () => {
+    if (!shareUrl) return;
+    
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      setCopied(true);
+      toast({
+        title: "Copied!",
+        description: "Share URL copied to clipboard.",
+      });
+      setTimeout(() => setCopied(false), 2000);
+    } catch (error) {
+      console.error('Error copying to clipboard:', error);
+      toast({
+        title: "Error",
+        description: "Failed to copy URL to clipboard.",
+        variant: "destructive",
+      });
+    }
+  };
+
   if (mode === "compare") {
-    return <ComparisonReport data={data} />;
+    return <ComparisonReport data={data} onShare={handleShareReport} isSharing={isSharing} shareUrl={shareUrl} onCopyUrl={handleCopyUrl} copied={copied} />;
   }
   
-  return <TotalsReport data={data} />;
+  return <TotalsReport data={data} onShare={handleShareReport} isSharing={isSharing} shareUrl={shareUrl} onCopyUrl={handleCopyUrl} copied={copied} />;
 }
 
-function TotalsReport({ data }: { data: any }) {
+function TotalsReport({ data, onShare, isSharing, shareUrl, onCopyUrl, copied }: { 
+  data: any; 
+  onShare: () => void; 
+  isSharing: boolean; 
+  shareUrl: string | null; 
+  onCopyUrl: () => void; 
+  copied: boolean; 
+}) {
   return (
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle className="text-2xl">URIEL Riversmead Sales</CardTitle>
-          <p className="text-lg text-muted-foreground">Date: {data.date}</p>
+          <div className="flex justify-between items-start">
+            <div>
+              <CardTitle className="text-2xl">URIEL Riversmead Sales</CardTitle>
+              <p className="text-lg text-muted-foreground">Date: {data.date}</p>
+            </div>
+            <div className="flex gap-2">
+              {!shareUrl ? (
+                <Button
+                  onClick={onShare}
+                  disabled={isSharing}
+                  variant="outline"
+                  size="sm"
+                >
+                  {isSharing ? (
+                    <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin mr-2" />
+                  ) : (
+                    <Share2 className="w-4 h-4 mr-2" />
+                  )}
+                  {isSharing ? "Creating..." : "Share Report"}
+                </Button>
+              ) : (
+                <Button
+                  onClick={onCopyUrl}
+                  variant="outline"
+                  size="sm"
+                >
+                  {copied ? (
+                    <Check className="w-4 h-4 mr-2" />
+                  ) : (
+                    <Copy className="w-4 h-4 mr-2" />
+                  )}
+                  {copied ? "Copied!" : "Copy URL"}
+                </Button>
+              )}
+            </div>
+          </div>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="bg-muted/50 p-4 rounded-lg">
@@ -110,7 +213,14 @@ function TotalsReport({ data }: { data: any }) {
   );
 }
 
-function ComparisonReport({ data }: { data: any }) {
+function ComparisonReport({ data, onShare, isSharing, shareUrl, onCopyUrl, copied }: { 
+  data: any; 
+  onShare: () => void; 
+  isSharing: boolean; 
+  shareUrl: string | null; 
+  onCopyUrl: () => void; 
+  copied: boolean; 
+}) {
   const getChangeIcon = (change: string) => {
     if (change === "no comp" || change === "0%") {
       return <Minus className="w-4 h-4 text-muted-foreground" />;
@@ -137,11 +247,45 @@ function ComparisonReport({ data }: { data: any }) {
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle className="text-2xl">URIEL Riversmead Sales</CardTitle>
-          <p className="text-lg text-muted-foreground">Date: {data.date}</p>
-          <Badge variant="outline" className="w-fit">
-            {data.comparison.period_name}
-          </Badge>
+          <div className="flex justify-between items-start">
+            <div>
+              <CardTitle className="text-2xl">URIEL Riversmead Sales</CardTitle>
+              <p className="text-lg text-muted-foreground">Date: {data.date}</p>
+              <Badge variant="outline" className="w-fit">
+                {data.comparison.period_name}
+              </Badge>
+            </div>
+            <div className="flex gap-2">
+              {!shareUrl ? (
+                <Button
+                  onClick={onShare}
+                  disabled={isSharing}
+                  variant="outline"
+                  size="sm"
+                >
+                  {isSharing ? (
+                    <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin mr-2" />
+                  ) : (
+                    <Share2 className="w-4 h-4 mr-2" />
+                  )}
+                  {isSharing ? "Creating..." : "Share Report"}
+                </Button>
+              ) : (
+                <Button
+                  onClick={onCopyUrl}
+                  variant="outline"
+                  size="sm"
+                >
+                  {copied ? (
+                    <Check className="w-4 h-4 mr-2" />
+                  ) : (
+                    <Copy className="w-4 h-4 mr-2" />
+                  )}
+                  {copied ? "Copied!" : "Copy URL"}
+                </Button>
+              )}
+            </div>
+          </div>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="bg-muted/50 p-4 rounded-lg">
