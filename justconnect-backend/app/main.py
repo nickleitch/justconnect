@@ -6,8 +6,10 @@ from datetime import datetime, timedelta
 from typing import Dict, List, Any
 import re
 from pydantic import BaseModel
-import requests
 import json
+import uuid
+import os
+from pathlib import Path
 
 app = FastAPI()
 
@@ -20,16 +22,9 @@ app.add_middleware(
     allow_headers=["*"],  # Allows all headers
 )
 
-class SMSConfig(BaseModel):
-    provider: str
-    apiKey: str
-    fromNumber: str
-    recipients: List[str]
-
-class SMSRequest(BaseModel):
+class ShareReportRequest(BaseModel):
     report: Dict[str, Any]
-    sms_config: SMSConfig
-    report_mode: str
+    mode: str
 
 class ReportGenerator:
     def __init__(self, df: pd.DataFrame):
@@ -83,7 +78,7 @@ class ReportGenerator:
         ]
         return daily_data
     
-    def generate_report(self, report_date: str = None) -> Dict[str, Any]:
+    def generate_report(self, report_date: str | None = None) -> Dict[str, Any]:
         if report_date:
             target_date = datetime.strptime(report_date, '%Y-%m-%d')
         else:
@@ -212,7 +207,7 @@ class ReportGenerator:
             'previous_total': round(previous_total, 2)
         }
     
-    def generate_comparison_report(self, period: str = "daily", report_date: str = None) -> Dict[str, Any]:
+    def generate_comparison_report(self, period: str = "daily", report_date: str | None = None) -> Dict[str, Any]:
         """Generate report with comparison analytics"""
         if report_date:
             target_date = datetime.strptime(report_date, '%Y-%m-%d')
@@ -365,112 +360,45 @@ async def upload_excel(
 def health_check():
     return {"status": "healthy"}
 
-def format_report_for_sms(report: Dict[str, Any], mode: str) -> str:
-    """Format report data for SMS message"""
-    if mode == "compare":
-        comparison = report['comparison']
-        message = f"URIEL Riversmead Sales - {report['date']}\n"
-        message += f"{comparison['period_name']}\n\n"
-        message += f"Total Sales:\n"
-        message += f"Mass: {comparison['total_sales']['mass']}\n"
-        message += f"P/Kg: {comparison['total_sales']['price_per_kg']}\n\n"
-        message += f"Product Categories:\n"
-        for category, values in comparison['product_categories'].items():
-            message += f"{category}: {values['percentage_change']}\n"
-        message += f"\nCustomer Groups:\n"
-        for group, values in comparison['customer_groups'].items():
-            message += f"{group}: {values['percentage_change']}\n"
-    else:
-        message = f"URIEL Riversmead Sales - {report['date']}\n\n"
-        message += f"Total Sales:\n"
-        message += f"Mass: {report['total_sales']['total_mass']:.1f}kg\n"
-        message += f"Value: R{report['total_sales']['total_sales_value']:.2f}\n"
-        message += f"Price/Kg: R{report['total_sales']['price_per_kg']:.2f}\n\n"
-        message += f"Top Categories:\n"
-        for category, values in list(report['product_categories'].items())[:3]:
-            message += f"{category}: R{values['sales_value']:.2f}\n"
-    
-    return message
-
-async def send_sms_twilio(message: str, config: SMSConfig):
-    """Send SMS using Twilio API"""
-    url = f"https://api.twilio.com/2010-04-01/Accounts/{config.apiKey.split(':')[0]}/Messages.json"
-    
-    for recipient in config.recipients:
-        data = {
-            'From': config.fromNumber,
-            'To': recipient,
-            'Body': message
-        }
-        
-        auth = tuple(config.apiKey.split(':'))
-        response = requests.post(url, data=data, auth=auth)
-        
-        if response.status_code != 201:
-            raise HTTPException(status_code=500, detail=f"Failed to send SMS to {recipient}")
-
-async def send_sms_aws_sns(message: str, config: SMSConfig):
-    """Send SMS using AWS SNS"""
-    import boto3
-    
-    access_key, secret_key = config.apiKey.split(':')
-    
-    sns = boto3.client(
-        'sns',
-        aws_access_key_id=access_key,
-        aws_secret_access_key=secret_key,
-        region_name='us-east-1'  # Default region
-    )
-    
-    for recipient in config.recipients:
-        sns.publish(
-            PhoneNumber=recipient,
-            Message=message
-        )
-
-async def send_sms_generic(message: str, config: SMSConfig):
-    """Generic SMS sending for other providers"""
-    provider_urls = {
-        'clickatell': 'https://platform.clickatell.com/messages/http/send',
-        'messagebird': 'https://rest.messagebird.com/messages',
-        'nexmo': 'https://rest.nexmo.com/sms/json'
-    }
-    
-    if config.provider not in provider_urls:
-        raise HTTPException(status_code=400, detail=f"Unsupported SMS provider: {config.provider}")
-    
-    headers = {'Authorization': f'Bearer {config.apiKey}'}
-    
-    for recipient in config.recipients:
-        data = {
-            'from': config.fromNumber,
-            'to': recipient,
-            'text': message
-        }
-        
-        response = requests.post(provider_urls[config.provider], json=data, headers=headers)
-        
-        if response.status_code not in [200, 201]:
-            raise HTTPException(status_code=500, detail=f"Failed to send SMS to {recipient}")
-
-@app.post("/send-sms")
-async def send_sms(request: SMSRequest):
-    """Send SMS notifications with report data"""
+@app.post("/share-report")
+async def share_report(request: ShareReportRequest):
+    """Create a publicly shareable link for a report"""
     try:
-        message = format_report_for_sms(request.report, request.report_mode)
+        report_id = str(uuid.uuid4())
         
-        if request.sms_config.provider == "twilio":
-            await send_sms_twilio(message, request.sms_config)
-        elif request.sms_config.provider == "aws_sns":
-            await send_sms_aws_sns(message, request.sms_config)
-        else:
-            await send_sms_generic(message, request.sms_config)
+        shared_dir = Path("shared-reports")
+        shared_dir.mkdir(exist_ok=True)
+        
+        report_file = shared_dir / f"{report_id}.json"
+        with open(report_file, 'w') as f:
+            json.dump({
+                "report": request.report,
+                "mode": request.mode,
+                "created_at": datetime.now().isoformat()
+            }, f, indent=2)
+        
+        base_url = "https://justconnect-git-main-nick-7901s-projects.vercel.app"
+        share_url = f"{base_url}/shared/{report_id}"
         
         return {
             "status": "success",
-            "message": "SMS sent successfully",
-            "recipients_count": len(request.sms_config.recipients)
+            "share_url": share_url,
+            "report_id": report_id
         }
-        
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error sending SMS: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error creating shareable link: {str(e)}")
+
+@app.get("/shared/{report_id}")
+async def get_shared_report(report_id: str):
+    """Retrieve a shared report by ID"""
+    try:
+        report_file = Path("shared-reports") / f"{report_id}.json"
+        if not report_file.exists():
+            raise HTTPException(status_code=404, detail="Report not found")
+        
+        with open(report_file, 'r') as f:
+            report_data = json.load(f)
+        
+        return report_data
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error retrieving shared report: {str(e)}")

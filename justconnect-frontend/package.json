@@ -2,7 +2,7 @@
   "name": "justconnect-frontend",
   "private": true,
   "type": "module",
-  "description": "Justconnect Sales Report Generator with Comparison Analytics and SMS Integration",
+  "description": "Justconnect Sales Report Generator with Comparison Analytics and Public Sharing",
   "scripts": {
     "dev": "vite",
     "build": "vite build",

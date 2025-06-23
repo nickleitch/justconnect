@@ -5,8 +5,6 @@ import {
   FileSpreadsheet,
   BarChart3,
   TrendingUp,
-  MessageSquare,
-  Settings,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -24,13 +22,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
 import { FileUpload } from "./FileUpload";
 import { ReportDisplay } from "./ReportDisplay";
-import { SMSConfig } from "./SMSConfig";
 
 const REPORT_MODES = [
   { value: "totals", label: "Daily Totals" },
@@ -65,12 +59,7 @@ interface ReportData {
   comparison?: any;
 }
 
-interface SMSSettings {
-  provider: string;
-  apiKey: string;
-  fromNumber: string;
-  recipients: string[];
-}
+
 
 export function JustconnectReportGenerator() {
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
@@ -78,15 +67,6 @@ export function JustconnectReportGenerator() {
   const [comparisonPeriod, setComparisonPeriod] = useState<string>("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [reportData, setReportData] = useState<ReportData | null>(null);
-  const [showSMSConfig, setShowSMSConfig] = useState(false);
-  const [smsSettings, setSMSSettings] = useState<SMSSettings>({
-    provider: "",
-    apiKey: "",
-    fromNumber: "",
-    recipients: []
-  });
-  const [sendSMS, setSendSMS] = useState(false);
-  const [isSendingSMS, setIsSendingSMS] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
 
   const handleGenerateReport = async () => {
@@ -109,85 +89,59 @@ export function JustconnectReportGenerator() {
         ? `/upload-excel?comparison_mode=true&period=${comparisonPeriod}`
         : '/upload-excel';
 
-      await new Promise((resolve, reject) => {
-        const xhr = new XMLHttpRequest();
-        
-        xhr.upload.addEventListener('progress', (event) => {
-          if (event.lengthComputable) {
-            const percentComplete = Math.round((event.loaded / event.total) * 100);
-            setUploadProgress(percentComplete);
-          }
+      const progressInterval = setInterval(() => {
+        setUploadProgress(prev => {
+          if (prev >= 90) return prev;
+          return prev + Math.random() * 15;
         });
-        
-        xhr.addEventListener('load', async () => {
-          if (xhr.status >= 200 && xhr.status < 300) {
-            try {
-              const result = JSON.parse(xhr.responseText);
-              setReportData(result.report);
-              
-              if (sendSMS && smsSettings.apiKey && smsSettings.recipients.length > 0) {
-                await handleSendSMS(result.report);
-              }
-              resolve(result);
-            } catch (parseError) {
-              reject(new Error('Failed to parse response'));
-            }
-          } else {
-            reject(new Error('Failed to generate report'));
-          }
-        });
-        
-        xhr.addEventListener('error', () => {
-          reject(new Error('Failed to generate report'));
-        });
-        
-        xhr.addEventListener('abort', () => {
-          reject(new Error('Upload was aborted'));
-        });
-        
-        xhr.open('POST', `${import.meta.env.VITE_API_URL}${endpoint}`);
-        xhr.send(formData);
+      }, 200);
+
+      const response = await fetch(`${import.meta.env.VITE_API_URL}${endpoint}`, {
+        method: 'POST',
+        body: formData,
       });
+
+      clearInterval(progressInterval);
+      setUploadProgress(100);
+
+      if (!response.ok) {
+        throw new Error('Failed to generate report');
+      }
+
+      const result = await response.json();
+      setReportData(result.report);
     } catch (error) {
       console.error('Error generating report:', error);
     } finally {
       setIsGenerating(false);
-      setUploadProgress(0);
+      setTimeout(() => setUploadProgress(0), 1000);
     }
   };
 
-  const handleSendSMS = async (report: ReportData) => {
-    setIsSendingSMS(true);
-    try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/send-sms`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          report: report,
-          sms_config: smsSettings,
-          report_mode: reportMode
-        }),
-      });
 
-      if (!response.ok) {
-        throw new Error('Failed to send SMS');
-      }
-
-      console.log('SMS sent successfully');
-    } catch (error) {
-      console.error('Error sending SMS:', error);
-    } finally {
-      setIsSendingSMS(false);
-    }
-  };
 
   const isFormValid = uploadedFile && reportMode && 
     (reportMode !== "compare" || comparisonPeriod);
 
   return (
+ devin/1750711583-simplify-webapp-architecture
+    <div className="max-w-6xl mx-auto space-y-8">
+      {/* Header */}
+      <div className="text-center space-y-4">
+        <div className="inline-flex items-center justify-center w-16 h-16 bg-primary/10 rounded-2xl mb-4">
+          <FileSpreadsheet className="w-8 h-8 text-primary" />
+        </div>
+        <h1 className="text-4xl font-bold tracking-tight">
+          Justconnect Sales Reports
+        </h1>
+        <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+          Upload your daily Excel sales data and generate comprehensive reports with comparison analytics
+        </p>
+      </div>
+
+=======
     <div className="max-w-5xl mx-auto space-y-6">
+ main
       {/* Main Form */}
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Left Column - Configuration */}
@@ -259,48 +213,7 @@ export function JustconnectReportGenerator() {
             </CardContent>
           </Card>
 
-          {/* SMS Configuration */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <MessageSquare className="w-5 h-5" />
-                SMS Notifications
-              </CardTitle>
-              <CardDescription>
-                Send reports to sales agents via SMS
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="enable-sms"
-                  checked={sendSMS}
-                  onCheckedChange={(checked) => setSendSMS(checked as boolean)}
-                />
-                <Label htmlFor="enable-sms">Enable SMS notifications</Label>
-              </div>
 
-              {sendSMS && (
-                <div className="space-y-4">
-                  <Button
-                    variant="outline"
-                    onClick={() => setShowSMSConfig(!showSMSConfig)}
-                    className="w-full"
-                  >
-                    <Settings className="w-4 h-4 mr-2" />
-                    {showSMSConfig ? "Hide" : "Configure"} SMS Settings
-                  </Button>
-
-                  {showSMSConfig && (
-                    <SMSConfig
-                      settings={smsSettings}
-                      onSettingsChange={setSMSSettings}
-                    />
-                  )}
-                </div>
-              )}
-            </CardContent>
-          </Card>
 
           {/* Generate Button */}
           <Card>
@@ -324,19 +237,14 @@ export function JustconnectReportGenerator() {
                   <div className="space-y-2 w-full">
                     <div className="flex items-center gap-2">
                       <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                      <span>Uploading... {uploadProgress}%</span>
+                      <span>Uploading... {Math.round(uploadProgress)}%</span>
                     </div>
                     <Progress value={uploadProgress} className="w-full h-2" />
                   </div>
-                ) : isSendingSMS ? (
-                  <>
-                    <MessageSquare className="w-4 h-4 mr-2" />
-                    Sending SMS...
-                  </>
                 ) : (
                   <>
                     <CalendarCheck className="w-4 h-4 mr-2" />
-                    Generate Report {sendSMS ? "& Send SMS" : ""}
+                    Generate Report
                   </>
                 )}
               </Button>
