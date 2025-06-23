@@ -25,7 +25,7 @@ export function AppLayout({ children }: AppLayoutProps) {
             <img 
               src="/logo.png" 
               alt="JusConnect Logo" 
-              className="h-8 w-auto"
+              className="h-24 w-auto"
             />
           </div>
         </SidebarHeader>
