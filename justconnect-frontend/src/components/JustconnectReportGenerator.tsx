@@ -124,6 +124,7 @@ export function JustconnectReportGenerator() {
     (reportMode !== "compare" || comparisonPeriod);
 
   return (
+ devin/1750711583-simplify-webapp-architecture
     <div className="max-w-6xl mx-auto space-y-8">
       {/* Header */}
       <div className="text-center space-y-4">
@@ -138,8 +139,11 @@ export function JustconnectReportGenerator() {
         </p>
       </div>
 
+=======
+    <div className="max-w-5xl mx-auto space-y-6">
+ main
       {/* Main Form */}
-      <div className="grid gap-8 lg:grid-cols-2">
+      <div className="grid gap-6 lg:grid-cols-2">
         {/* Left Column - Configuration */}
         <div className="space-y-6">
           {/* File Upload */}
