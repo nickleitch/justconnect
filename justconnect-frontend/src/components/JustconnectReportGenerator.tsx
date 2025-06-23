@@ -145,7 +145,7 @@ export function JustconnectReportGenerator() {
           reject(new Error('Upload was aborted'));
         });
         
-        xhr.open('POST', `http://localhost:8000${endpoint}`);
+        xhr.open('POST', `${import.meta.env.VITE_API_URL}${endpoint}`);
         xhr.send(formData);
       });
     } catch (error) {
@@ -159,7 +159,7 @@ export function JustconnectReportGenerator() {
   const handleSendSMS = async (report: ReportData) => {
     setIsSendingSMS(true);
     try {
-      const response = await fetch('http://localhost:8000/send-sms', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/send-sms`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
