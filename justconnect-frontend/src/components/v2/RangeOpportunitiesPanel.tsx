@@ -91,7 +91,7 @@ export function RangeOpportunitiesPanel() {
                 </TableCell>
                 <TableCell>
                   <span className="font-semibold text-green-600">
-                    ${opportunity.potential_monthly_value.toLocaleString()}
+                    R{opportunity.potential_monthly_value.toLocaleString()}
                   </span>
                 </TableCell>
                 <TableCell>
