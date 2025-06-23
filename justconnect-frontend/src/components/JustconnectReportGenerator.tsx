@@ -123,7 +123,7 @@ export function JustconnectReportGenerator() {
   const isFormValid = uploadedFile && reportMode && 
     (reportMode !== "compare" || comparisonPeriod);
 
-return (
+
     <div className="max-w-6xl mx-auto space-y-8">
       {/* Header */}
       <div className="text-center space-y-4">
