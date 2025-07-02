@@ -29,18 +29,34 @@ export default function UploadPage() {
   }, [])
 
   const processCSVData = (csvData: any[]) => {
-    return csvData.map(row => ({
-      invoice_number: parseInt(row['Invoice Number']) || 0,
-      transaction_type: row['Transaction Type'] || '',
-      date: row['Date'] || '',
-      account_number: row['Account Number'] || '',
-      customer: row['Customer'] || '',
-      product: row['Product'] || '',
-      mass: parseInt(row['Mass']) || 0,
-      sales_value: parseFloat(row['Sales Value']?.toString().replace(/,/g, '')) || 0,
-      sales_qty: parseInt(row['Sales Qty']) || 0,
-      r_kg: parseFloat(row['R/KG']?.toString().replace(/,/g, '')) || 0
-    }))
+    return csvData.map(row => {
+      let rKgValue = 0
+      const rKgRaw = row['R/KG']?.toString().trim()
+      if (rKgRaw && rKgRaw !== '-' && rKgRaw !== '') {
+        const parsed = parseFloat(rKgRaw.replace(/,/g, ''))
+        rKgValue = isNaN(parsed) ? 0 : parsed
+      }
+
+      let massValue = 0
+      const massRaw = row['Mass']?.toString().trim()
+      if (massRaw && massRaw !== '-' && massRaw !== '') {
+        const parsed = parseFloat(massRaw.replace(/,/g, ''))
+        massValue = isNaN(parsed) ? 0 : parsed
+      }
+
+      return {
+        invoice_number: parseInt(row['Invoice Number']) || 0,
+        transaction_type: row['Transaction Type'] || '',
+        date: row['Date'] || '',
+        account_number: row['Account Number'] || '',
+        customer: row['Customer'] || '',
+        product: row['Product'] || '',
+        mass: massValue,
+        sales_value: parseFloat(row['Sales Value']?.toString().replace(/,/g, '')) || 0,
+        sales_qty: parseInt(row['Sales Qty']) || 0,
+        r_kg: rKgValue
+      }
+    })
   }
 
   const uploadData = async () => {
