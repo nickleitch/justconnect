@@ -5,7 +5,7 @@ export async function GET() {
   try {
     console.log('Testing database connection...')
     
-    const { data, error, count } = await supabase
+    const { error, count } = await supabase
       .from('sales_data')
       .select('*', { count: 'exact', head: true })
     

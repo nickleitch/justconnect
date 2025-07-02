@@ -62,7 +62,7 @@ export default function SalesManagerDashboard() {
 
   useEffect(() => {
     loadData()
-  }, [filters])
+  }, [filters, loadData])
 
   const handleFilterChange = (key: string, value: string) => {
     setFilters(prev => ({ ...prev, [key]: value }))

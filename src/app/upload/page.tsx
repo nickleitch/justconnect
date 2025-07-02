@@ -120,9 +120,9 @@ export default function UploadPage() {
             router.push('/dashboard/sales-director')
           }, 2000)
         },
-        error: (error) => {
+        error: (parseError) => {
           setStatus('error')
-          setMessage(`Error parsing CSV: ${error.message}`)
+          setMessage(`Error parsing CSV: ${parseError.message}`)
           setUploading(false)
         }
       })
