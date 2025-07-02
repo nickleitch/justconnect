@@ -1,0 +1,11 @@
+{
+  "buildCommand": "cd jft-frontend && npm run build",
+  "outputDirectory": "jft-frontend/dist",
+  "installCommand": "cd jft-frontend && npm install",
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}
