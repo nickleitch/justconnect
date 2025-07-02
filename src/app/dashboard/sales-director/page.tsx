@@ -3,10 +3,20 @@
 import React, { useState, useEffect } from 'react'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import { Filter, TrendingUp, Users, DollarSign, Package } from 'lucide-react'
-import { getSalesData, getAggregatedData } from '@/lib/database'
+import { getAggregatedData } from '@/lib/database'
+
+interface SalesRecord {
+  name: string
+  sales_rands: number
+  mass_kg: number
+  sales_qty: number
+  customer_count: number
+  avg_price_per_kg: number
+  record_count: number
+}
 
 export default function SalesDirectorDashboard() {
-  const [data, setData] = useState<any[]>([])
+  const [data, setData] = useState<SalesRecord[]>([])
   const [filters, setFilters] = useState({
     year: new Date().getFullYear(),
     month: new Date().getMonth() + 1,
@@ -24,10 +34,6 @@ export default function SalesDirectorDashboard() {
   const products = ['Product 1', 'Product 2', 'Product 3']
   const reps = ['Uriel', 'Lyle', 'Calvyn']
 
-  useEffect(() => {
-    loadData()
-  }, [filters])
-
   const loadData = async () => {
     setLoading(true)
     try {
@@ -39,13 +45,17 @@ export default function SalesDirectorDashboard() {
     setLoading(false)
   }
 
+  useEffect(() => {
+    loadData()
+  }, [filters])
+
   const handleFilterChange = (key: string, value: string) => {
     setFilters(prev => ({ ...prev, [key]: value }))
   }
 
-  const totalSales = data.reduce((sum: number, item: any) => sum + item.sales_rands, 0)
-  const totalMass = data.reduce((sum: number, item: any) => sum + item.mass_kg, 0)
-  const totalCustomers = data.reduce((sum: number, item: any) => sum + item.customer_count, 0)
+  const totalSales = data.reduce((sum: number, item: SalesRecord) => sum + item.sales_rands, 0)
+  const totalMass = data.reduce((sum: number, item: SalesRecord) => sum + item.mass_kg, 0)
+  const totalCustomers = data.reduce((sum: number, item: SalesRecord) => sum + item.customer_count, 0)
   const avgPricePerKg = totalMass > 0 ? totalSales / totalMass : 0
 
   return (

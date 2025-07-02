@@ -34,9 +34,10 @@ export async function POST() {
       .eq('transaction_type', 'TEST')
 
     return NextResponse.json({ success: true, message: 'Database table exists and is accessible' })
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Database initialization error:', error)
-    return NextResponse.json({ success: false, error: error.message || 'Unknown error' }, { status: 500 })
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    return NextResponse.json({ success: false, error: errorMessage }, { status: 500 })
   }
 }
 
@@ -60,8 +61,9 @@ export async function GET() {
       message: 'Database connection successful', 
       recordCount: data?.length || 0 
     })
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Database test error:', error)
-    return NextResponse.json({ success: false, error: error.message || 'Unknown error' }, { status: 500 })
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    return NextResponse.json({ success: false, error: errorMessage }, { status: 500 })
   }
 }

@@ -19,9 +19,10 @@ export async function initializeDatabase() {
     
     console.log('Database initialization completed successfully')
     return { success: true }
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Database initialization failed:', error)
-    return { success: false, error: error.message }
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    return { success: false, error: errorMessage }
   }
 }
 
@@ -38,8 +39,9 @@ export async function testDatabaseConnection() {
     
     console.log('Database connection test successful')
     return { success: true, data }
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Database connection test failed:', error)
-    return { success: false, error: error.message }
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    return { success: false, error: errorMessage }
   }
 }

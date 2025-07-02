@@ -2,7 +2,6 @@
 
 import Link from "next/link"
 import { Upload, BarChart3, Users, TrendingUp } from "lucide-react"
-import { Button } from "@/components/ui/button"
 
 export default function Home() {
   return (

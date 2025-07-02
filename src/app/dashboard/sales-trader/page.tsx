@@ -3,11 +3,28 @@
 import React, { useState, useEffect } from 'react'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line } from 'recharts'
 import { Filter, TrendingUp, Users, DollarSign, Package } from 'lucide-react'
-import { getSalesData, getAggregatedData } from '@/lib/database'
+import { getAggregatedData } from '@/lib/database'
+
+interface SalesRecord {
+  name: string
+  sales_rands: number
+  mass_kg: number
+  sales_qty: number
+  customer_count: number
+  avg_price_per_kg: number
+  record_count: number
+}
+
+interface OrderHistoryRecord {
+  week: string
+  Product1: number
+  Product2: number
+  Product3: number
+}
 
 export default function SalesTraderDashboard() {
-  const [data, setData] = useState<any[]>([])
-  const [orderHistoryData, setOrderHistoryData] = useState<any[]>([])
+  const [data, setData] = useState<SalesRecord[]>([])
+  const [orderHistoryData, setOrderHistoryData] = useState<OrderHistoryRecord[]>([])
   const [filters, setFilters] = useState({
     year: new Date().getFullYear(),
     month: new Date().getMonth() + 1,
@@ -22,10 +39,6 @@ export default function SalesTraderDashboard() {
   const customers = ['Customer 1', 'Customer 2', 'Customer 3']
   const products = ['Product 1', 'Product 2', 'Product 3']
   const traders = ['Bruce', 'Preshantha']
-
-  useEffect(() => {
-    loadData()
-  }, [filters])
 
   const loadData = async () => {
     setLoading(true)
@@ -47,13 +60,17 @@ export default function SalesTraderDashboard() {
     setLoading(false)
   }
 
+  useEffect(() => {
+    loadData()
+  }, [filters])
+
   const handleFilterChange = (key: string, value: string) => {
     setFilters(prev => ({ ...prev, [key]: value }))
   }
 
-  const totalSales = data.reduce((sum: number, item: any) => sum + item.sales_rands, 0)
-  const totalMass = data.reduce((sum: number, item: any) => sum + item.mass_kg, 0)
-  const totalCustomers = data.reduce((sum: number, item: any) => sum + item.customer_count, 0)
+  const totalSales = data.reduce((sum: number, item: SalesRecord) => sum + item.sales_rands, 0)
+  const totalMass = data.reduce((sum: number, item: SalesRecord) => sum + item.mass_kg, 0)
+  const totalCustomers = data.reduce((sum: number, item: SalesRecord) => sum + item.customer_count, 0)
   const avgPricePerKg = totalMass > 0 ? totalSales / totalMass : 0
 
   return (

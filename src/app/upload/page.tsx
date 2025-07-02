@@ -28,7 +28,7 @@ export default function UploadPage() {
     }
   }, [])
 
-  const processCSVData = (csvData: any[]) => {
+  const processCSVData = (csvData: Record<string, unknown>[]) => {
     return csvData.map(row => {
       let rKgValue = 0
       const rKgRaw = row['R/KG']?.toString().trim()
@@ -44,17 +44,30 @@ export default function UploadPage() {
         massValue = isNaN(parsed) ? 0 : parsed
       }
 
+      let formattedDate = ''
+      const dateRaw = row['Date']?.toString().trim()
+      if (dateRaw) {
+        try {
+          const date = new Date(dateRaw)
+          if (!isNaN(date.getTime())) {
+            formattedDate = date.toISOString().split('T')[0] // YYYY-MM-DD format
+          }
+        } catch (e) {
+          console.warn('Invalid date:', dateRaw)
+        }
+      }
+
       return {
-        invoice_number: parseInt(row['Invoice Number']) || 0,
-        transaction_type: row['Transaction Type'] || '',
-        date: row['Date'] || '',
-        account_number: row['Account Number'] || '',
-        customer: row['Customer'] || '',
-        product: row['Product'] || '',
-        mass: massValue,
-        sales_value: parseFloat(row['Sales Value']?.toString().replace(/,/g, '')) || 0,
-        sales_qty: parseInt(row['Sales Qty']) || 0,
-        r_kg: rKgValue
+        invoice_number: parseInt(row['Invoice Number']?.toString() || '0') || 0,
+        transaction_type: (row['Transaction Type'] || '').toString().substring(0, 50), // Limit length
+        date: formattedDate,
+        account_number: (row['Account Number'] || '').toString().substring(0, 50),
+        customer: (row['Customer'] || '').toString().substring(0, 100),
+        product: (row['Product'] || '').toString().substring(0, 100),
+        mass: Math.round(massValue), // Ensure integer
+        sales_value: Math.round(parseFloat(row['Sales Value']?.toString().replace(/,/g, '') || '0') * 100) / 100, // Round to 2 decimals
+        sales_qty: parseInt(row['Sales Qty']?.toString() || '0') || 0,
+        r_kg: Math.round(rKgValue * 100) / 100 // Round to 2 decimals
       }
     })
   }
@@ -74,7 +87,7 @@ export default function UploadPage() {
           setProgress(25)
           setMessage('Processing data...')
 
-          const processedData = processCSVData(results.data)
+          const processedData = processCSVData(results.data as Record<string, unknown>[])
           
           setProgress(50)
           setMessage('Uploading to database...')
@@ -113,9 +126,10 @@ export default function UploadPage() {
           setUploading(false)
         }
       })
-    } catch (error: any) {
+    } catch (error: unknown) {
       setStatus('error')
-      setMessage(`Upload failed: ${error.message}`)
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      setMessage(`Upload failed: ${errorMessage}`)
       setUploading(false)
     }
   }
