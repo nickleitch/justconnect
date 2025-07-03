@@ -88,6 +88,8 @@ export default function UploadPage() {
           setMessage('Processing data...')
 
           const processedData = processCSVData(results.data as Record<string, unknown>[])
+          console.log('Processed data sample:', processedData.slice(0, 3))
+          console.log('Total processed records:', processedData.length)
           
           setProgress(50)
           setMessage('Uploading to database...')
