@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line } from 'recharts'
 import { Filter, TrendingUp, Users, DollarSign, Package } from 'lucide-react'
 import { getAggregatedData } from '@/lib/database'
@@ -40,7 +40,7 @@ export default function SalesManagerDashboard() {
   const products = ['Product 1', 'Product 2', 'Product 3']
   const managers = ['Uriel', 'Lyle', 'Calvyn']
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     setLoading(true)
     try {
       const aggregatedData = await getAggregatedData({ ...filters, groupBy: 'product' })
@@ -58,11 +58,11 @@ export default function SalesManagerDashboard() {
       console.error('Error loading data:', error)
     }
     setLoading(false)
-  }
+  }, [filters])
 
   useEffect(() => {
     loadData()
-  }, [filters, loadData])
+  }, [loadData])
 
   const handleFilterChange = (key: string, value: string) => {
     setFilters(prev => ({ ...prev, [key]: value }))

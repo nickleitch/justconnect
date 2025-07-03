@@ -52,7 +52,7 @@ export default function UploadPage() {
           if (!isNaN(date.getTime())) {
             formattedDate = date.toISOString().split('T')[0] // YYYY-MM-DD format
           }
-        } catch (e) {
+        } catch {
           console.warn('Invalid date:', dateRaw)
         }
       }
